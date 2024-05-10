@@ -1,63 +1,53 @@
 version: '3.9'
-# This version indicates the Compose file syntax version and feature support.
-# Check the Docker documentation for the latest Compose file version for your project.
 
 services:
+  # Redis container configuration
   redis:
-    image: redis:alpine3.19
-    # Specify the Redis Docker image using Alpine 3.19 as a base for a lightweight footprint.
-    container_name: redis-container
-    # Define a custom name for the container.
+    image: redis:alpine3.19  # Using the Alpine Linux-based Redis image
+    container_name: redis
+    networks:
+      - my_network  # Connect the Redis container to the network defined below
     ports:
-      - "6379:6379"
-      # Expose Redis port 6379 to the host for external access.
-    networks:
-      - backend
-      # Connect the Redis service to the backend network.
-
-  mongo:
-    image: mongo:7.0.9
-    # Specify the MongoDB Docker image.
-    container_name: mongo-container
-    # Define a custom name for the container.
-    ports:
-      - "27017:27017"
-      # Expose MongoDB port 27017 to the host for external access.
-    networks:
-      - backend
-      # Connect the MongoDB service to the backend network.
-
-  node:
-    image: node:22.1.0-alpine3.18
-    # Specify the Node.js Docker image using version 22.1.0 with an Alpine 3.18 base for a lightweight footprint.
-    container_name: node-container
-    # Define a custom name for the container.
-    working_dir: /app
-    # Set the working directory inside the container to /app.
-    networks:
-      - frontend
-      # Connect the Node.js service to the frontend network.
+      - "6379:6379"  # Expose Redis's default port 6379
     volumes:
-      - ./app:/app
-      # Mount the local app directory to the /app directory in the container for persistent storage.
+      - redis_data:/data  # Persist data to a named volume
 
-  azure_cli:
-    image: mcr.microsoft.com/azure-cli:2.9.1
-    # Specify the Azure CLI Docker image version 2.9.1.
-    container_name: azure-cli-container
-    # Define a custom name for the container.
+  # MongoDB container configuration
+  mongo:
+    image: mongo:7.0.9  # Using the official MongoDB image
+    container_name: mongo
     networks:
-      - frontend
-      # Connect the Azure CLI service to the frontend network.
+      - my_network  # Connect the MongoDB container to the network defined below
+    ports:
+      - "27017:27017"  # Expose MongoDB's default port 27017
+    volumes:
+      - mongo_data:/data/db  # Persist data to a named volume
 
-# Define the networks used by the services.
+  # Node.js container configuration
+  node:
+    image: node:22.1.0-alpine3.18  # Using the Node.js 22.1.0 on Alpine Linux image
+    container_name: node
+    networks:
+      - my_network  # Connect the Node.js container to the network defined below
+    working_dir: /usr/src/app  # Set the working directory
+    volumes:
+      - ./app:/usr/src/app  # Mount the host's ./app directory to the container's /usr/src/app directory
+    command: sh -c "while :; do sleep 3600; done"  # Keep the container running indefinitely (you can change this as needed)
+
+  # Azure CLI container configuration
+  azure-cli:
+    image: bitnami/azure-cli:2.60.0  # Using the Bitnami Azure CLI image
+    container_name: azure-cli
+    networks:
+      - my_network  # Connect the Azure CLI container to the network defined below
+    command: az interactive  # Start Azure CLI in interactive mode
+
+# Define the network for the containers
 networks:
-  frontend:
-    # This network connects the Node.js and Azure CLI services.
-    driver: bridge
-    # Use the default bridge network driver.
+  my_network:
+    driver: bridge  # Use the default bridge network
 
-  backend:
-    # This network connects the Redis and MongoDB services.
-    driver: bridge
-    # Use the default bridge network driver.
+# Define named volumes for persisting data
+volumes:
+  redis_data:
+  mongo_data:
